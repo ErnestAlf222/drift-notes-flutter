@@ -1,0 +1,20 @@
+# ¿Por qué este archivo?
+# riverpod_generator necesita "ver" las clases que genera Drift (Note,
+# NotesCompanion...) para crear los providers tipados. Si todos los
+# generadores corren juntos, riverpod no puede leer database.g.dart
+# porque aún no existe cuando le toca su turno.
+#
+# Solución: dos targets. El target "drift" (lib/database/**) se construye
+# PRIMERO y genera los .g.dart de Drift; después corre el resto de la app,
+# que ya puede usar esas clases.
+targets:
+  drift:
+    sources: ["lib/database/**"]
+
+  $default:
+    dependencies: [":drift"] # el target drift se ejecuta primero
+    sources:
+      exclude: ["lib/database/**"] # ya los procesa el target drift
+    builders:
+      drift_dev:
+        enabled: false
