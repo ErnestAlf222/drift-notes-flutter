@@ -12,22 +12,24 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
   // of this object.
   NotesDao(super.attachedDatabase);
 
-  Stream<List<Note>> watchAllNotes(){
-    final query = select(notes);
-    // Todo: Ordenar por prioridad
-     return query.watch();
+  Stream<List<Note>> watchAllNotes() {
+    final query = select(notes)
+      ..orderBy([
+        (n) => OrderingTerm(expression: n.isImportant, mode: OrderingMode.desc),
+        (n) => OrderingTerm(expression: n.createdAt, mode: OrderingMode.desc),
+
+      ]);
+    return query.watch();
   }
 
   Future<Note> getNoteById(int id) {
-    final query = select(notes)
-      ..where((n) => n.id.equals(id));
-    
+    final query = select(notes)..where((n) => n.id.equals(id));
+
     return query.getSingle();
   }
 
-  Future<int> insertNote(NotesCompanion note){
+  Future<int> insertNote(NotesCompanion note) {
     return into(notes).insert(note);
-
   }
 
   Future<bool> updateNote(Note note) {
@@ -35,9 +37,7 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
   }
 
   Future<int> deleteNote(int id) {
-    final query = delete(notes)
-      ..where((n) => n.id.equals(id));
+    final query = delete(notes)..where((n) => n.id.equals(id));
     return query.go();
   }
 }
-

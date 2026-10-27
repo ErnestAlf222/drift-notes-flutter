@@ -4,13 +4,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'notes_provider.g.dart';
 
-
-
 @riverpod
 Stream<List<Note>> allNotes(Ref ref) {
-
   return ref.watch(appDatabaseProvider).notesDao.watchAllNotes();
-
 }
 
 @riverpod

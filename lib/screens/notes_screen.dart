@@ -1,7 +1,9 @@
 import 'package:drift_app/database/database.dart';
+import 'package:drift_app/providers/database_provider.dart';
 import 'package:drift_app/providers/notes_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:drift_app/theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 
 /// Pantalla de listado.
@@ -23,7 +25,7 @@ class NotesScreen extends ConsumerWidget {
         loading: () => Center(child: const CircularProgressIndicator()),
       ),
 
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           // final notesDao = ref.read(appDatabaseProvider).notesDao;
           // notesDao.insertNote(
@@ -31,19 +33,20 @@ class NotesScreen extends ConsumerWidget {
           // );
           context.push('/note/new');
         },
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('Nueva nota'),
       ),
     );
   }
 }
 
-class _ListItems extends StatelessWidget {
+class _ListItems extends ConsumerWidget {
   const _ListItems({required this.notes});
 
   final List<Note> notes;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
@@ -55,7 +58,7 @@ class _ListItems extends StatelessWidget {
             Icon(
               Icons.sticky_note_2_outlined,
               size: 64,
-              color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+              color: AppColors.primarySoft,
             ),
             const SizedBox(height: 12),
             Text('No hay notas', style: theme.textTheme.titleMedium),
@@ -77,76 +80,117 @@ class _ListItems extends StatelessWidget {
         final note = notes[index];
         final important = note.isImportant;
         return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: Dismissible(
             key: ValueKey(note.id),
             direction: DismissDirection.endToStart,
             background: Container(
               decoration: BoxDecoration(
                 color: scheme.error,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppRadius.card),
               ),
               alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 20),
+              padding: const EdgeInsets.only(right: 24),
               child: Icon(Icons.delete_outline, color: scheme.onError),
             ),
-            // TODO: borrar en la base de datos cuando exista.
             onDismissed: (_) => {
-              // setState(() => notes.removeAt(index))
+            //borrar en la base de datos cuando exista.
+              ref.read(appDatabaseProvider)
+                .notesDao
+                .deleteNote(note.id)
             },
-            child: Card(
-              margin: EdgeInsets.zero,
-              elevation: 0,
-              clipBehavior: Clip.antiAlias,
-              color: important
-                  ? scheme.tertiaryContainer.withValues(alpha: 0.45)
-                  : scheme.surfaceContainerLow,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: important
+                    ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: AppColors.importantGradient,
+                      )
+                    : null,
+                color: important ? null : AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.card),
+                border: Border.all(
                   color: important
-                      ? scheme.tertiary.withValues(alpha: 0.35)
-                      : scheme.outlineVariant.withValues(alpha: 0.5),
+                      ? Colors.transparent
+                      : AppColors.primaryLight,
                 ),
               ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.fromLTRB(8, 4, 16, 4),
-                title: Text(
-                  note.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                subtitle: Text(
-                  note.body,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                leading: IconButton(
-                  icon: Icon(
-                    important ? Icons.star_rounded : Icons.star_border_rounded,
-                    color: important ? Colors.amber : scheme.outline,
-                  ),
-                  // TODO: actualizar en la base de datos cuando exista.
-                  onPressed: () => {
-                    // setState(() {
-                    //   notes[index] = note.copyWith(
-                    //     isImportant: !note.isImportant,
-                    //   );
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  onTap: () => context.push('/note/${note.id}'),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 12, 16, 12),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            important
+                                ? Icons.star_rounded
+                                : Icons.star_border_rounded,
+                            color: important
+                                ? AppColors.star
+                                : AppColors.primarySoft,
+                          ),
 
-                    // }),
-                  },
+                          onPressed: () => {
+                          // actualizar en la base de datos cuando exista.
+                            ref.read(appDatabaseProvider)
+                            .notesDao
+                            .updateNote(note.copyWith(
+                              isImportant: !note.isImportant
+                            )),
+                          },
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                note.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: important
+                                      ? Colors.white
+                                      : AppColors.primaryText,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                note.body,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: important
+                                      ? Colors.white70
+                                      : AppColors.primaryMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: important
+                                ? Colors.white.withValues(alpha: 0.18)
+                                : AppColors.primaryFaint,
+                          ),
+                          child: Icon(
+                            Icons.chevron_right_rounded,
+                            color: important ? Colors.white : AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                trailing: Icon(
-                  Icons.chevron_right_rounded,
-                  color: scheme.outline,
-                ),
-                onTap: () => context.push('/note/${note.id}'),
               ),
             ),
           ),
